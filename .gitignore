@@ -1,0 +1,31 @@
+# Binary hasil build
+*.exe
+*.out
+*.a
+*.o
+
+// Temporary Folder
+tmp/
+
+# File sementara dari editor
+*.swp
+*.swo
+
+# Folder build/output
+bin/
+dist/
+
+# File Go Modules
+go.sum
+go.work
+vendor/
+
+# File Makefile build
+*.dSYM
+.vscode
+
+# File environment
+.env
+
+# File log
+*.log
