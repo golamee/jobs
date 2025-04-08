@@ -1,1 +1,1 @@
-# Logger in Go
+# Simple Jobs in Go
