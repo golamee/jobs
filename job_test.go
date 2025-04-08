@@ -73,15 +73,24 @@ func TestJob(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(1)
 
+		expectedName := "John Doe"
+		expectedAge := 30
 		expectedErr := errors.New("simulated error")
 
 		New[Man]().
 			Create(func(value Man) (any, error) {
+
+				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
+				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
+
 				return nil, expectedErr
 			}).
 			WithTimeout(2 * time.Second).
 			Subscribe(func(result any, err error) {
 				defer wg.Done()
+
+				assert.NotNil(t, err, "Err should not be nil")
+				assert.EqualError(t, err, expectedErr.Error(), "Err should match the expected value")
 
 				if err == nil {
 					t.Error("Expected error but got nil")
@@ -89,7 +98,7 @@ func TestJob(t *testing.T) {
 					t.Errorf("Expected error %v, got %v", expectedErr, err)
 				}
 			}).
-			Dispatch(Man{Name: "ErrorCase", Age: 40})
+			Dispatch(Man{Name: expectedName, Age: expectedAge})
 
 		wg.Wait()
 	})
