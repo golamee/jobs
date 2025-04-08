@@ -110,7 +110,7 @@ func TestJob(t *testing.T) {
 
 				return value.Name, nil
 			}).
-			WithTimeout(2 * time.Second).
+			WithTimeout(2*time.Second).
 			Subscribe(func(result any, err error) {
 
 				defer wg.Done()
@@ -123,7 +123,7 @@ func TestJob(t *testing.T) {
 				assert.Equal(t, expectedName, name, "Name should match the expected value")
 
 			}).
-			Dispatches(Man{Name: expectedName, Age: expectedAge})
+			Dispatches(Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge})
 
 		wg.Wait()
 	})
