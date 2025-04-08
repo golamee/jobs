@@ -20,18 +20,19 @@ func New[T any](handler ...func(T) (any, error)) *Job[T] {
 type JobInterface[T any] interface {
 	Create()
 	Dispatch(T)
-	Dispatches(...T)
+	Dispatches(T)
 	Subscribe()
+
 	handle(T)
 	emit()
 }
 
 type Job[T any] struct {
-	Timeout          time.Duration
-	Tries            int
-	Delay            time.Duration
-	handler          func(T) (any, error)
-	handlerSubscribe func(any, error)
+	Timeout    time.Duration
+	Tries      int
+	Delay      time.Duration
+	handler    func(T) (any, error)
+	subscriber []func(any, error)
 }
 
 func (j *Job[T]) Create(handler func(T) (any, error)) *Job[T] {
@@ -53,8 +54,18 @@ func (j *Job[T]) Dispatch(param T) *Job[T] {
 	return j
 }
 
+func (j *Job[T]) Dispatches(params ...T) *Job[T] {
+
+	for _, param := range params {
+		j.handle(param)
+	}
+
+	return j
+}
+
 func (j *Job[T]) Subscribe(handler func(any, error)) *Job[T] {
-	j.handlerSubscribe = handler
+
+	j.subscriber = append(j.subscriber, handler)
 
 	return j
 }
@@ -89,14 +100,14 @@ func (j *Job[T]) handle(param T) {
 	case err := <-errChan:
 		j.emit(nil, err)
 	case <-ctx.Done():
-		j.emit(nil, errors.New("job timeout"))
+		j.emit(nil, errors.New("Job timeout"))
 	}
 }
 
 func (j *Job[T]) emit(param any, err error) {
-	if j.handlerSubscribe == nil {
-		return
-	}
 
-	j.handlerSubscribe(param, err)
+	for _, sub := range j.subscriber {
+
+		sub(param, err)
+	}
 }
