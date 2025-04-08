@@ -34,7 +34,7 @@ func TestJob(t *testing.T) {
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		New[Man]().
+		job := New[Man]().
 			Create(func(value Man) (any, error) {
 
 				wg.Add(1)
@@ -44,21 +44,23 @@ func TestJob(t *testing.T) {
 
 				return value.Name, nil
 			}).
-			WithTimeout(2 * time.Second).
-			Subscribe(func(result any, err error) {
+			WithTimeout(2 * time.Second)
 
-				defer wg.Done()
+		job.Subscribe(func(result any, err error) {
 
-				assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
+			defer wg.Done()
 
-				name, ok := result.(string)
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
-				assert.True(t, ok, "Result should be a string")
-				assert.Equal(t, expectedName, name, "Name should match the expected value")
+			name, ok := result.(string)
 
-			}).
-			Dispatch(Man{Name: expectedName, Age: expectedAge}).
-			Dispatch(Man{Name: expectedName, Age: expectedAge})
+			assert.True(t, ok, "Result should be a string")
+			assert.Equal(t, expectedName, name, "Name should match the expected value")
+
+		})
+
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
 
 		wg.Wait()
 	})
@@ -70,7 +72,7 @@ func TestJob(t *testing.T) {
 		expectedAge := 30
 		expectedErr := errors.New("simulated error")
 
-		New[Man]().
+		job := New[Man]().
 			Create(func(value Man) (any, error) {
 
 				wg.Add(1)
@@ -80,16 +82,18 @@ func TestJob(t *testing.T) {
 
 				return nil, expectedErr
 			}).
-			WithTimeout(2 * time.Second).
-			Subscribe(func(result any, err error) {
+			WithTimeout(2 * time.Second)
 
-				defer wg.Done()
+		job.Subscribe(func(result any, err error) {
 
-				assert.NotNil(t, err, "Err should not be nil")
-				assert.EqualError(t, err, expectedErr.Error(), "Err should match the expected value")
+			defer wg.Done()
 
-			}).
-			Dispatch(Man{Name: expectedName, Age: expectedAge})
+			assert.NotNil(t, err, "Err should not be nil")
+			assert.EqualError(t, err, expectedErr.Error(), "Err should match the expected value")
+
+		})
+
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
 
 		wg.Wait()
 	})
@@ -100,7 +104,7 @@ func TestJob(t *testing.T) {
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		New[Man]().
+		job := New[Man]().
 			Create(func(value Man) (any, error) {
 
 				wg.Add(1)
@@ -110,20 +114,22 @@ func TestJob(t *testing.T) {
 
 				return value.Name, nil
 			}).
-			WithTimeout(2*time.Second).
-			Subscribe(func(result any, err error) {
+			WithTimeout(2 * time.Second)
 
-				defer wg.Done()
+		job.Subscribe(func(result any, err error) {
 
-				assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
+			defer wg.Done()
 
-				name, ok := result.(string)
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
-				assert.True(t, ok, "Result should be a string")
-				assert.Equal(t, expectedName, name, "Name should match the expected value")
+			name, ok := result.(string)
 
-			}).
-			Dispatches(Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge})
+			assert.True(t, ok, "Result should be a string")
+			assert.Equal(t, expectedName, name, "Name should match the expected value")
+
+		})
+
+		job.Dispatches(Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge})
 
 		wg.Wait()
 	})
@@ -134,7 +140,7 @@ func TestJob(t *testing.T) {
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		New[Man]().
+		job := New[Man]().
 			Create(func(value Man) (any, error) {
 
 				wg.Add(3)
@@ -144,45 +150,49 @@ func TestJob(t *testing.T) {
 
 				return value.Name, nil
 			}).
-			WithTimeout(2 * time.Second).
-			Subscribe(func(result any, err error) {
+			WithTimeout(2 * time.Second)
 
-				defer wg.Done()
+		job.Subscribe(func(result any, err error) {
 
-				assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
+			defer wg.Done()
 
-				name, ok := result.(string)
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
-				assert.True(t, ok, "Result should be a string")
-				assert.Equal(t, expectedName, name, "Name should match the expected value")
+			name, ok := result.(string)
 
-			}).
-			Subscribe(func(result any, err error) {
+			assert.True(t, ok, "Result should be a string")
+			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
-				defer wg.Done()
+		})
 
-				assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
+		job.Subscribe(func(result any, err error) {
 
-				name, ok := result.(string)
+			defer wg.Done()
 
-				assert.True(t, ok, "Result should be a string")
-				assert.Equal(t, expectedName, name, "Name should match the expected value")
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
-			}).
-			Subscribe(func(result any, err error) {
+			name, ok := result.(string)
 
-				defer wg.Done()
+			assert.True(t, ok, "Result should be a string")
+			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
-				assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
+		})
 
-				name, ok := result.(string)
+		job.Subscribe(func(result any, err error) {
 
-				assert.True(t, ok, "Result should be a string")
-				assert.Equal(t, expectedName, name, "Name should match the expected value")
+			defer wg.Done()
 
-			}).
-			Dispatch(Man{Name: expectedName, Age: expectedAge}).
-			Dispatch(Man{Name: expectedName, Age: expectedAge})
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
+
+			name, ok := result.(string)
+
+			assert.True(t, ok, "Result should be a string")
+			assert.Equal(t, expectedName, name, "Name should match the expected value")
+
+		})
+
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
 
 		wg.Wait()
 	})
