@@ -18,7 +18,7 @@ type Man struct {
 func TestJob(t *testing.T) {
 	t.Run("CreateOnly", func(t *testing.T) {
 
-		j := New[Man]()
+		j := NewJob[Man]()
 
 		j.Create(func(value Man) (any, error) {
 			return fmt.Sprintf("Name: %s, Age: %d", value.Name, value.Age), nil
@@ -28,16 +28,42 @@ func TestJob(t *testing.T) {
 
 	})
 
+	t.Run("DispatchFailed", func(t *testing.T) {
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		expectedName := "John Doe"
+		expectedAge := 30
+		expectedErr := errors.New("simulated error")
+
+		job := NewJob[Man]().
+			Create(func(value Man) (any, error) {
+
+				defer wg.Done()
+
+				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
+				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
+
+				return nil, expectedErr
+			}).
+			WithTimeout(2 * time.Second)
+
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
+
+		wg.Wait()
+	})
+
 	t.Run("DispatchSuccess", func(t *testing.T) {
 		var wg sync.WaitGroup
+		wg.Add(1)
 
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		job := New[Man]().
+		job := NewJob[Man]().
 			Create(func(value Man) (any, error) {
 
-				wg.Add(1)
+				defer wg.Done()
 
 				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
 				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
@@ -46,33 +72,23 @@ func TestJob(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any, err error) {
-
-			defer wg.Done()
-
-			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
-
-			name, ok := result.(string)
-
-			assert.True(t, ok, "Result should be a string")
-			assert.Equal(t, expectedName, name, "Name should match the expected value")
-
-		})
-
-		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
 		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
 
 		wg.Wait()
 	})
 
-	t.Run("DispatchFailed", func(t *testing.T) {
+}
+
+func TestJobWithSubscribe(t *testing.T) {
+
+	t.Run("DispatchFailed:Subscribe", func(t *testing.T) {
 		var wg sync.WaitGroup
 
 		expectedName := "John Doe"
 		expectedAge := 30
 		expectedErr := errors.New("simulated error")
 
-		job := New[Man]().
+		job := NewJob[Man]().
 			Create(func(value Man) (any, error) {
 
 				wg.Add(1)
@@ -98,13 +114,13 @@ func TestJob(t *testing.T) {
 		wg.Wait()
 	})
 
-	t.Run("DispatchesSuccess", func(t *testing.T) {
+	t.Run("DispatchSuccess:Subscribe", func(t *testing.T) {
 		var wg sync.WaitGroup
 
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		job := New[Man]().
+		job := NewJob[Man]().
 			Create(func(value Man) (any, error) {
 
 				wg.Add(1)
@@ -129,18 +145,55 @@ func TestJob(t *testing.T) {
 
 		})
 
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
+
+		wg.Wait()
+	})
+
+	t.Run("DispatchesSuccess:Subscribe", func(t *testing.T) {
+		var wg sync.WaitGroup
+		wg.Add(6)
+
+		expectedName := "John Doe"
+		expectedAge := 30
+
+		job := NewJob[Man]().
+			Create(func(value Man) (any, error) {
+
+				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
+				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
+
+				return value.Name, nil
+			}).
+			WithTimeout(2 * time.Second)
+
+		job.Subscribe(func(result any, err error) {
+
+			defer wg.Done()
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
+
+			name, ok := result.(string)
+
+			assert.True(t, ok, "Result should be a string")
+			assert.Equal(t, expectedName, name, "Name should match the expected value")
+
+		})
+
+		job.Dispatches(Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge})
 		job.Dispatches(Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge})
 
 		wg.Wait()
 	})
 
-	t.Run("DispatchSuccess:_subscribe_more_than_one", func(t *testing.T) {
+	t.Run("DispatchSuccess:Subscribes", func(t *testing.T) {
 		var wg sync.WaitGroup
 
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		job := New[Man]().
+		job := NewJob[Man]().
 			Create(func(value Man) (any, error) {
 
 				wg.Add(3)
@@ -191,6 +244,63 @@ func TestJob(t *testing.T) {
 
 		})
 
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
+
+		wg.Wait()
+	})
+
+	t.Run("DispatchSuccess:SubscribeOnce", func(t *testing.T) {
+		var wg sync.WaitGroup
+		wg.Add(4)
+
+		expectedName := "John Doe"
+		expectedAge := 30
+
+		counter := 1
+
+		job := NewJob[Man]().
+			Create(func(value Man) (any, error) {
+
+				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
+				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
+
+				return value.Name, nil
+			}).
+			WithTimeout(2 * time.Second)
+
+		job.Subscribe(func(result any, err error) {
+
+			defer wg.Done()
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
+
+			name, ok := result.(string)
+
+			assert.True(t, ok, "Result should be a string")
+			assert.Equal(t, expectedName, name, "Name should match the expected value")
+
+		})
+
+		job.SubscribeOnce(func(result any, err error) {
+
+			defer wg.Done()
+
+			wg.Add(1)
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
+
+			name, ok := result.(string)
+
+			assert.True(t, ok, "Result should be a string")
+			assert.Equal(t, expectedName, name, "Name should match the expected value")
+
+			assert.Greater(t, counter, 0, "Counter should be greater than 0")
+			counter--
+		})
+
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
+		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
 		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
 		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
 
