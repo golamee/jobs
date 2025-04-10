@@ -10,7 +10,8 @@ import (
 
 func NewJob[T any](handler ...func(T) (any, error)) *Job[T] {
 	j := &Job[T]{
-		Tries: 1,
+		// Timeout: 10 * time.Second,
+		// Delay: 3 * time.Second,
 	}
 
 	if len(handler) > 0 {
@@ -25,7 +26,6 @@ type JobInterface[T any] interface {
 	Dispatch(T) *Job[T]
 	Dispatches(T) *Job[T]
 
-	WithTries(int) *Job[T]
 	WithTimeout(time.Duration) *Job[T]
 	WithDelay(time.Duration) *Job[T]
 
@@ -44,7 +44,6 @@ type subscriber[T any] struct {
 }
 
 type Job[T any] struct {
-	Tries   int
 	Timeout time.Duration
 	Delay   time.Duration
 
@@ -67,15 +66,6 @@ func (j *Job[T]) WithTimeout(timeout time.Duration) *Job[T] {
 
 func (j *Job[T]) WithDelay(delay time.Duration) *Job[T] {
 	j.Delay = delay
-	return j
-}
-
-func (j *Job[T]) WithTries(tries int) *Job[T] {
-	if tries < 1 {
-		return j
-	}
-
-	j.Tries = tries
 	return j
 }
 
