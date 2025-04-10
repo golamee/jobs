@@ -94,7 +94,7 @@ func (j *Job[T]) handle(param T) {
 	tries := j.Tries
 	triesCount := 0
 
-	ctx, cancel := context.WithTimeout(context.Background(), j.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), j.Timeout) // Implement timeout
 	defer cancel()
 
 	var run func() = func() {
@@ -104,7 +104,7 @@ func (j *Job[T]) handle(param T) {
 			}
 		}()
 
-		time.Sleep(j.Delay)
+		time.Sleep(j.Delay) // Implement Delay
 
 		res, err := j.handler(param)
 
@@ -125,13 +125,13 @@ func (j *Job[T]) handle(param T) {
 		j.emit(nil, err)
 		triesCount++
 		if triesCount < tries {
-			go run()
+			go run() // Re-run the handler when tries is active
 		}
 	case <-ctx.Done():
 		j.emit(nil, errors.New("Job timeout"))
 		triesCount++
 		if triesCount < j.Tries {
-			go run()
+			go run() // Re-run the handler when tries is active
 		}
 	}
 }
