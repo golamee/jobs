@@ -100,13 +100,14 @@ func TestJobWithSubscribe(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any, err error) {
+		job.Subscribe(func(result any) {
+
+		}, func(err error) {
 
 			defer wg.Done()
 
 			assert.NotNil(t, err, "Err should not be nil")
 			assert.EqualError(t, err, expectedErr.Error(), "Err should match the expected value")
-
 		})
 
 		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
@@ -132,17 +133,18 @@ func TestJobWithSubscribe(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any, err error) {
+		job.Subscribe(func(result any) {
 
 			defer wg.Done()
-
-			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
 			name, ok := result.(string)
 
 			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
+		}, func(err error) {
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 		})
 
 		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
@@ -168,17 +170,18 @@ func TestJobWithSubscribe(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any, err error) {
+		job.Subscribe(func(result any) {
 
 			defer wg.Done()
-
-			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
 			name, ok := result.(string)
 
 			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
+		}, func(err error) {
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 		})
 
 		job.Dispatches(Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge}, Man{Name: expectedName, Age: expectedAge})
@@ -205,43 +208,46 @@ func TestJobWithSubscribe(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any, err error) {
+		job.Subscribe(func(result any) {
 
 			defer wg.Done()
-
-			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
 			name, ok := result.(string)
 
 			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
+		}, func(err error) {
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 		})
 
-		job.Subscribe(func(result any, err error) {
+		job.Subscribe(func(result any) {
 
 			defer wg.Done()
-
-			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
 			name, ok := result.(string)
 
 			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
+		}, func(err error) {
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 		})
 
-		job.Subscribe(func(result any, err error) {
+		job.Subscribe(func(result any) {
 
 			defer wg.Done()
-
-			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
 			name, ok := result.(string)
 
 			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
+		}, func(err error) {
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 		})
 
 		job.Dispatch(Man{Name: expectedName, Age: expectedAge})
@@ -269,26 +275,25 @@ func TestJobWithSubscribe(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any, err error) {
+		job.Subscribe(func(result any) {
 
 			defer wg.Done()
-
-			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
 			name, ok := result.(string)
 
 			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
+		}, func(err error) {
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 		})
 
-		job.SubscribeOnce(func(result any, err error) {
+		job.SubscribeOnce(func(result any) {
 
 			defer wg.Done()
 
 			wg.Add(1)
-
-			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 
 			name, ok := result.(string)
 
@@ -297,6 +302,9 @@ func TestJobWithSubscribe(t *testing.T) {
 
 			assert.Greater(t, counter, 0, "Counter should be greater than 0")
 			counter--
+		}, func(err error) {
+
+			assert.Nil(t, err, fmt.Sprintf("Err should be nil. Unexpected error: %v", err))
 		})
 
 		job.Dispatch(Man{Name: expectedName, Age: expectedAge})

@@ -27,17 +27,18 @@ type JobInterface[T any] interface {
 	WithTimeout(time.Duration) *Job[T]
 	WithDelay(time.Duration) *Job[T]
 
-	Subscribe() int
-	SubscribeOnce() int
+	Subscribe(func(any), func(error)) int
+	SubscribeOnce(func(any), func(error)) int
 
 	handle(T)
 	emit()
 }
 
 type subscriber[T any] struct {
-	id      string
-	handler func(any, error)
-	once    bool // ⬅️ Tambahan flag apakah hanya dieksekusi sekali
+	id            string
+	handler       func(any)
+	handlerOnFail func(error)
+	once          bool // ⬅️ Tambahan flag apakah hanya dieksekusi sekali
 }
 
 type Job[T any] struct {
@@ -47,8 +48,9 @@ type Job[T any] struct {
 
 	handler    func(T) (any, error)
 	subscriber []subscriber[T]
-	nextID     int
-	mu         sync.Mutex // ⬅️ Mutex untuk proteksi data
+
+	nextID int
+	mu     sync.Mutex // ⬅️ Mutex untuk proteksi data
 }
 
 func (j *Job[T]) Create(handler func(T) (any, error)) *Job[T] {
@@ -100,7 +102,7 @@ func (j *Job[T]) handle(param T) {
 	var run func() = func() {
 		defer func() {
 			if r := recover(); r != nil {
-				errChan <- errors.New("panic occurred in handler")
+				errChan <- errors.New("panic occurred in job's handler")
 			}
 		}()
 
@@ -136,18 +138,23 @@ func (j *Job[T]) handle(param T) {
 	}
 }
 
-func (j *Job[T]) Subscribe(handler func(any, error)) string {
+func (j *Job[T]) Subscribe(onSuccess func(any), onFail func(error)) string {
+
 	j.mu.Lock()
 	defer j.mu.Unlock()
 
 	id := fmt.Sprintf("sub-%d", j.nextID)
 	j.nextID++
 
-	j.subscriber = append(j.subscriber, subscriber[T]{
-		id:      id,
-		handler: handler,
-		once:    false,
-	})
+	newSubscriber := subscriber[T]{
+		id:            id,
+		handler:       onSuccess,
+		handlerOnFail: onFail,
+		once:          false,
+	}
+
+	j.subscriber = append(j.subscriber, newSubscriber)
+
 	return id
 }
 
@@ -163,18 +170,21 @@ func (j *Job[T]) Unsubscribe(id string) {
 	}
 }
 
-func (j *Job[T]) SubscribeOnce(handler func(any, error)) string {
+func (j *Job[T]) SubscribeOnce(onSuccess func(any), onFail func(error)) string {
 	j.mu.Lock()
 	defer j.mu.Unlock()
 
 	id := fmt.Sprintf("sub-%d", j.nextID)
 	j.nextID++
 
-	j.subscriber = append(j.subscriber, subscriber[T]{
-		id:      id,
-		handler: handler,
-		once:    true,
-	})
+	newSubscriber := subscriber[T]{
+		id:            id,
+		handler:       onSuccess,
+		handlerOnFail: onFail,
+		once:          true,
+	}
+
+	j.subscriber = append(j.subscriber, newSubscriber)
 
 	return id
 }
@@ -195,7 +205,13 @@ func (j *Job[T]) emit(param any, err error) {
 	remaining := make([]subscriber[T], 0, len(subs))
 
 	for _, sub := range subs {
-		sub.handler(param, err)
+
+		if err == nil {
+			sub.handler(param)
+		} else if sub.handlerOnFail != nil {
+			sub.handlerOnFail(err)
+		}
+
 		if !sub.once {
 			remaining = append(remaining, sub)
 		}
