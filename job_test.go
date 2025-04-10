@@ -102,6 +102,7 @@ func TestJobWithSubscribe(t *testing.T) {
 
 		job.Subscribe(func(result any) {
 
+			assert.True(t, false, "Subscribe should not be called")
 		}, func(err error) {
 
 			defer wg.Done()
