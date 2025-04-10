@@ -91,15 +91,20 @@ func (j *Job[T]) handle(param T) {
 	resultChan := make(chan any, 1)
 	errChan := make(chan error, 1)
 
+	tries := j.Tries
+	triesCount := 0
+
 	ctx, cancel := context.WithTimeout(context.Background(), j.Timeout)
 	defer cancel()
 
-	go func() {
+	var run func() = func() {
 		defer func() {
 			if r := recover(); r != nil {
 				errChan <- errors.New("panic occurred in handler")
 			}
 		}()
+
+		time.Sleep(j.Delay)
 
 		res, err := j.handler(param)
 
@@ -108,15 +113,26 @@ func (j *Job[T]) handle(param T) {
 			return
 		}
 		resultChan <- res
-	}()
+
+	}
+
+	go run()
 
 	select {
 	case res := <-resultChan:
 		j.emit(res, nil)
 	case err := <-errChan:
 		j.emit(nil, err)
+		triesCount++
+		if triesCount < tries {
+			go run()
+		}
 	case <-ctx.Done():
 		j.emit(nil, errors.New("Job timeout"))
+		triesCount++
+		if triesCount < j.Tries {
+			go run()
+		}
 	}
 }
 
