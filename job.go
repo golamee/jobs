@@ -9,7 +9,9 @@ import (
 )
 
 func NewJob[T any](handler ...func(T) (any, error)) *Job[T] {
-	j := &Job[T]{}
+	j := &Job[T]{
+		Tries: 1,
+	}
 
 	if len(handler) > 0 {
 		j.handler = handler[0]
@@ -93,9 +95,6 @@ func (j *Job[T]) handle(param T) {
 	resultChan := make(chan any, 1)
 	errChan := make(chan error, 1)
 
-	tries := j.Tries
-	triesCount := 0
-
 	ctx, cancel := context.WithTimeout(context.Background(), j.Timeout) // Implement timeout
 	defer cancel()
 
@@ -125,16 +124,8 @@ func (j *Job[T]) handle(param T) {
 		j.emit(res, nil)
 	case err := <-errChan:
 		j.emit(nil, err)
-		triesCount++
-		if triesCount < tries {
-			go run() // Re-run the handler when tries is active
-		}
 	case <-ctx.Done():
 		j.emit(nil, errors.New("Job timeout"))
-		triesCount++
-		if triesCount < j.Tries {
-			go run() // Re-run the handler when tries is active
-		}
 	}
 }
 
@@ -208,7 +199,7 @@ func (j *Job[T]) emit(param any, err error) {
 
 		if err == nil {
 			sub.handler(param)
-		} else if sub.handlerOnFail != nil {
+		} else {
 			sub.handlerOnFail(err)
 		}
 
