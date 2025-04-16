@@ -70,11 +70,15 @@ func (j *Job[T]) WithDelay(delay time.Duration) *Job[T] {
 }
 
 func (j *Job[T]) Dispatch(param T) *Job[T] {
+	time.Sleep(j.Delay) // Implement Delay
+
 	go j.handle(param)
 	return j
 }
 
 func (j *Job[T]) Dispatches(params ...T) *Job[T] {
+	time.Sleep(j.Delay) // Implement Delay
+
 	for _, param := range params {
 		go j.handle(param)
 	}
@@ -94,8 +98,6 @@ func (j *Job[T]) handle(param T) {
 				errChan <- errors.New("panic occurred in job's handler")
 			}
 		}()
-
-		time.Sleep(j.Delay) // Implement Delay
 
 		res, err := j.handler(param)
 
@@ -176,15 +178,13 @@ func (j *Job[T]) emit(param any, err error) {
 	}
 
 	j.mu.Lock()
-
 	subs := make([]subscriber[T], len(j.subscriber))
-
 	copy(subs, j.subscriber) // Copy dulu untuk dibaca di luar lock
-
 	j.mu.Unlock()
 
 	remaining := make([]subscriber[T], 0, len(subs))
 
+	j.mu.Lock()
 	for _, sub := range subs {
 
 		if err == nil {
@@ -197,6 +197,7 @@ func (j *Job[T]) emit(param any, err error) {
 			remaining = append(remaining, sub)
 		}
 	}
+	j.mu.Unlock()
 
 	j.mu.Lock()
 	j.subscriber = remaining

@@ -1,1 +1,1 @@
-# Simple Jobs in Go
+# Simple Job in Go
