@@ -113,11 +113,11 @@ func (j *Job[T]) handle(param T) {
 
 	select {
 	case res := <-resultChan:
-		j.emit(res, nil)
+		j.emit(res)
 	case err := <-errChan:
-		j.emit(nil, err)
+		j.emitFailed(err)
 	case <-ctx.Done():
-		j.emit(nil, errors.New("Job timeout"))
+		j.emitFailed(errors.New("Job timeout"))
 	}
 }
 
@@ -172,7 +172,7 @@ func (j *Job[T]) SubscribeOnce(onSuccess func(any), onFail func(error)) string {
 	return id
 }
 
-func (j *Job[T]) emit(param any, err error) {
+func (j *Job[T]) emit(param any) {
 	if len(j.subscriber) == 0 {
 		return
 	}
@@ -187,11 +187,35 @@ func (j *Job[T]) emit(param any, err error) {
 	j.mu.Lock()
 	for _, sub := range subs {
 
-		if err == nil {
-			sub.handler(param)
-		} else {
-			sub.handlerOnFail(err)
+		sub.handler(param)
+
+		if !sub.once {
+			remaining = append(remaining, sub)
 		}
+	}
+	j.mu.Unlock()
+
+	j.mu.Lock()
+	j.subscriber = remaining
+	j.mu.Unlock()
+}
+
+func (j *Job[T]) emitFailed(err error) {
+	if len(j.subscriber) == 0 {
+		return
+	}
+
+	j.mu.Lock()
+	subs := make([]subscriber[T], len(j.subscriber))
+	copy(subs, j.subscriber) // Copy dulu untuk dibaca di luar lock
+	j.mu.Unlock()
+
+	remaining := make([]subscriber[T], 0, len(subs))
+
+	j.mu.Lock()
+	for _, sub := range subs {
+
+		sub.handlerOnFail(err)
 
 		if !sub.once {
 			remaining = append(remaining, sub)
