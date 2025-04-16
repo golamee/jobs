@@ -33,12 +33,13 @@ type JobInterface[T any] interface {
 	SubscribeOnce(func(any), func(error)) int
 
 	handle(T)
-	emit()
+	emitSuccess(T)
+	emitFailed(error)
 }
 
-type subscriber[T any] struct {
+type subscriber[S any] struct {
 	id            string
-	handler       func(any)
+	handler       func(S)
 	handlerOnFail func(error)
 	once          bool // ⬅️ Tambahan flag apakah hanya dieksekusi sekali
 }
@@ -48,7 +49,7 @@ type Job[T any] struct {
 	Delay   time.Duration
 
 	handler    func(T) (any, error)
-	subscriber []subscriber[T]
+	subscriber []subscriber[any]
 
 	nextID int
 	mu     sync.Mutex // ⬅️ Mutex untuk proteksi data
@@ -113,7 +114,7 @@ func (j *Job[T]) handle(param T) {
 
 	select {
 	case res := <-resultChan:
-		j.emit(res)
+		j.emitSuccess(res)
 	case err := <-errChan:
 		j.emitFailed(err)
 	case <-ctx.Done():
@@ -129,7 +130,7 @@ func (j *Job[T]) Subscribe(onSuccess func(any), onFail func(error)) string {
 	id := fmt.Sprintf("sub-%d", j.nextID)
 	j.nextID++
 
-	newSubscriber := subscriber[T]{
+	newSubscriber := subscriber[any]{
 		id:            id,
 		handler:       onSuccess,
 		handlerOnFail: onFail,
@@ -160,7 +161,7 @@ func (j *Job[T]) SubscribeOnce(onSuccess func(any), onFail func(error)) string {
 	id := fmt.Sprintf("sub-%d", j.nextID)
 	j.nextID++
 
-	newSubscriber := subscriber[T]{
+	newSubscriber := subscriber[any]{
 		id:            id,
 		handler:       onSuccess,
 		handlerOnFail: onFail,
@@ -172,17 +173,17 @@ func (j *Job[T]) SubscribeOnce(onSuccess func(any), onFail func(error)) string {
 	return id
 }
 
-func (j *Job[T]) emit(param any) {
+func (j *Job[T]) emitSuccess(param any) {
 	if len(j.subscriber) == 0 {
 		return
 	}
 
 	j.mu.Lock()
-	subs := make([]subscriber[T], len(j.subscriber))
+	subs := make([]subscriber[any], len(j.subscriber))
 	copy(subs, j.subscriber) // Copy dulu untuk dibaca di luar lock
 	j.mu.Unlock()
 
-	remaining := make([]subscriber[T], 0, len(subs))
+	remaining := make([]subscriber[any], 0, len(subs))
 
 	j.mu.Lock()
 	for _, sub := range subs {
@@ -206,11 +207,11 @@ func (j *Job[T]) emitFailed(err error) {
 	}
 
 	j.mu.Lock()
-	subs := make([]subscriber[T], len(j.subscriber))
+	subs := make([]subscriber[any], len(j.subscriber))
 	copy(subs, j.subscriber) // Copy dulu untuk dibaca di luar lock
 	j.mu.Unlock()
 
-	remaining := make([]subscriber[T], 0, len(subs))
+	remaining := make([]subscriber[any], 0, len(subs))
 
 	j.mu.Lock()
 	for _, sub := range subs {
