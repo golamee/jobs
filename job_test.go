@@ -21,9 +21,9 @@ func TestJob(t *testing.T) {
 
 	t.Run("CreateOnly", func(t *testing.T) {
 
-		j := jobs.NewJob[Man]()
+		j := jobs.NewJob[Man, string]()
 
-		j.Create(func(value Man) (any, error) {
+		j.Create(func(value Man) (string, error) {
 			return fmt.Sprintf("Name: %s, Age: %d", value.Name, value.Age), nil
 		})
 
@@ -41,8 +41,8 @@ func TestJobSuccess(t *testing.T) {
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		job := jobs.NewJob[Man]().
-			Create(func(value Man) (any, error) {
+		job := jobs.NewJob[Man, string]().
+			Create(func(value Man) (string, error) {
 
 				defer wg.Done()
 
@@ -64,8 +64,8 @@ func TestJobSuccess(t *testing.T) {
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		job := jobs.NewJob[Man]().
-			Create(func(value Man) (any, error) {
+		job := jobs.NewJob[Man, string]().
+			Create(func(value Man) (string, error) {
 
 				wg.Add(1)
 
@@ -76,13 +76,12 @@ func TestJobSuccess(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any) {
+		job.Subscribe(func(result string) {
 
 			defer wg.Done()
 
-			name, ok := result.(string)
+			name := result
 
-			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
 		}, func(err error) {
@@ -102,8 +101,8 @@ func TestJobSuccess(t *testing.T) {
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		job := jobs.NewJob[Man]().
-			Create(func(value Man) (any, error) {
+		job := jobs.NewJob[Man, string]().
+			Create(func(value Man) (string, error) {
 
 				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
 				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
@@ -112,13 +111,12 @@ func TestJobSuccess(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any) {
+		job.Subscribe(func(result string) {
 
 			defer wg.Done()
 
-			name, ok := result.(string)
+			name := result
 
-			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
 		}, func(err error) {
@@ -138,8 +136,8 @@ func TestJobSuccess(t *testing.T) {
 		expectedName := "John Doe"
 		expectedAge := 30
 
-		job := jobs.NewJob[Man]().
-			Create(func(value Man) (any, error) {
+		job := jobs.NewJob[Man, string]().
+			Create(func(value Man) (string, error) {
 
 				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
 				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
@@ -148,39 +146,36 @@ func TestJobSuccess(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any) {
+		job.Subscribe(func(result string) {
 
 			defer wg.Done()
 
-			name, ok := result.(string)
+			name := result
 
-			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
 		}, func(err error) {
 			assert.True(t, false, "Subscribe error should not be called")
 		})
 
-		job.Subscribe(func(result any) {
+		job.Subscribe(func(result string) {
 
 			defer wg.Done()
 
-			name, ok := result.(string)
+			name := result
 
-			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
 		}, func(err error) {
 			assert.True(t, false, "Subscribe error should not be called")
 		})
 
-		job.Subscribe(func(result any) {
+		job.Subscribe(func(result string) {
 
 			defer wg.Done()
 
-			name, ok := result.(string)
+			name := result
 
-			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
 		}, func(err error) {
@@ -203,8 +198,8 @@ func TestJobSuccess(t *testing.T) {
 
 		counter := 1
 
-		job := jobs.NewJob[Man]().
-			Create(func(value Man) (any, error) {
+		job := jobs.NewJob[Man, string]().
+			Create(func(value Man) (string, error) {
 
 				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
 				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
@@ -213,26 +208,24 @@ func TestJobSuccess(t *testing.T) {
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any) {
+		job.Subscribe(func(result string) {
 
 			defer wg.Done()
 
-			name, ok := result.(string)
+			name := result
 
-			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
 		}, func(err error) {
 			assert.True(t, false, "Subscribe error should not be called")
 		})
 
-		job.SubscribeOnce(func(result any) {
+		job.SubscribeOnce(func(result string) {
 
 			defer wg.Done()
 
-			name, ok := result.(string)
+			name := result
 
-			assert.True(t, ok, "Result should be a string")
 			assert.Equal(t, expectedName, name, "Name should match the expected value")
 
 			assert.Greater(t, counter, 0, "Counter should be greater than 0")
@@ -260,15 +253,15 @@ func TestJobFailed(t *testing.T) {
 		expectedAge := 30
 		expectedErr := errors.New("simulated error")
 
-		job := jobs.NewJob[Man]().
-			Create(func(value Man) (any, error) {
+		job := jobs.NewJob[Man, string]().
+			Create(func(value Man) (string, error) {
 
 				defer wg.Done()
 
 				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
 				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
 
-				return nil, expectedErr
+				return "", expectedErr
 			}).
 			WithTimeout(2 * time.Second)
 
@@ -285,17 +278,17 @@ func TestJobFailed(t *testing.T) {
 		expectedAge := 30
 		expectedErr := errors.New("simulated error")
 
-		job := jobs.NewJob[Man]().
-			Create(func(value Man) (any, error) {
+		job := jobs.NewJob[Man, string]().
+			Create(func(value Man) (string, error) {
 
 				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
 				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
 
-				return nil, expectedErr
+				return "", expectedErr
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any) {
+		job.Subscribe(func(result string) {
 			assert.True(t, false, "Subscribe should not be called")
 		}, func(err error) {
 
@@ -320,17 +313,17 @@ func TestJobFailed(t *testing.T) {
 
 		counter := 1
 
-		job := jobs.NewJob[Man]().
-			Create(func(value Man) (any, error) {
+		job := jobs.NewJob[Man, string]().
+			Create(func(value Man) (string, error) {
 
 				assert.Equal(t, expectedName, value.Name, "Name should match the expected value")
 				assert.Equal(t, expectedAge, value.Age, "Age should match the expected value")
 
-				return nil, expectedErr
+				return "", expectedErr
 			}).
 			WithTimeout(2 * time.Second)
 
-		job.Subscribe(func(result any) {
+		job.Subscribe(func(result string) {
 			assert.True(t, false, "Subscribe should not be called")
 		}, func(err error) {
 
@@ -339,7 +332,7 @@ func TestJobFailed(t *testing.T) {
 			assert.NotNil(t, err, "Err should not be nil")
 		})
 
-		job.SubscribeOnce(func(result any) {
+		job.SubscribeOnce(func(result string) {
 			assert.True(t, false, "Subscribe should not be called")
 		}, func(err error) {
 			defer wg.Done()
@@ -372,8 +365,8 @@ func TestJobDelay(t *testing.T) {
 		expectedTimeLess := delay + (10 * time.Millisecond)
 		start := time.Now()
 
-		job := jobs.NewJob[Man]().
-			Create(func(value Man) (any, error) {
+		job := jobs.NewJob[Man, string]().
+			Create(func(value Man) (string, error) {
 
 				defer wg.Done()
 
